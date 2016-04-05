@@ -11,6 +11,8 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 
@@ -18,13 +20,14 @@ import java.net.InetSocketAddress;
  * Created by tonydeng on 16/3/23.
  */
 public class ChatServer {
+    private static final Logger log = LoggerFactory.getLogger(ChatServer.class);
     private final ChannelGroup group = new DefaultChannelGroup(ImmediateEventExecutor.INSTANCE);
 
     private final EventLoopGroup workerGroup = new NioEventLoopGroup();
 
     private Channel channel;
 
-    public ChannelFuture start(InetSocketAddress address){
+    public ChannelFuture start(InetSocketAddress address) {
         ServerBootstrap boot = new ServerBootstrap();
         boot.group(workerGroup).channel(NioServerSocketChannel.class).childHandler(createInitializer(group));
 
@@ -33,12 +36,14 @@ public class ChatServer {
         return f;
     }
 
-    protected ChannelHandler createInitializer(ChannelGroup group2) {
-        return new ChatServerInitializer(group2);
+    protected ChannelHandler createInitializer(ChannelGroup group) {
+        return new ChatServerInitializer(group);
     }
 
-    public void destroy(){
-        if(channel != null)
+    public void destroy() {
+        if (log.isInfoEnabled())
+            log.info("chat server destroy......");
+        if (channel != null)
             channel.close();
         group.close();
         workerGroup.shutdownGracefully();
@@ -47,10 +52,13 @@ public class ChatServer {
     public static void main(String[] args) {
         final ChatServer server = new ChatServer();
         ChannelFuture f = server.start(new InetSocketAddress(2048));
-        System.out.println("server start................");
-        Runtime.getRuntime().addShutdownHook(new Thread(){
+        if (log.isInfoEnabled())
+            log.info("chat server start................");
+        Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
+                if(log.isInfoEnabled())
+                    log.info("chat server shutdown.......");
                 server.destroy();
             }
         });

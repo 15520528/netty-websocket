@@ -8,11 +8,14 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.stream.ChunkedWriteHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by tonydeng on 16/3/23.
  */
 public class ChatServerInitializer extends ChannelInitializer<Channel> {
+    private static final Logger log = LoggerFactory.getLogger(ChatServerInitializer.class);
     private final ChannelGroup group;
     public ChatServerInitializer(ChannelGroup group) {
         super();
@@ -21,6 +24,8 @@ public class ChatServerInitializer extends ChannelInitializer<Channel> {
 
     @Override
     protected void initChannel(Channel ch) throws Exception {
+        if(log.isInfoEnabled())
+            log.info("chat server init channel......");
         ChannelPipeline pipeline = ch.pipeline();
 
         pipeline.addLast(new HttpServerCodec());
