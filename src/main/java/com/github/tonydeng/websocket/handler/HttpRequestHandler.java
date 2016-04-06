@@ -24,13 +24,13 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<FullHttpRequ
         this.wsUri = wsUri;
     }
 
-    @Override
+//    @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg)
             throws Exception {
-        if (wsUri.equalsIgnoreCase(msg.getUri())) {
+        if (wsUri.equalsIgnoreCase(msg.uri())) {
             ctx.fireChannelRead(msg.retain());
         } else {
-            if (HttpHeaders.is100ContinueExpected(msg)) {
+            if (HttpHeaderUtil.is100ContinueExpected(msg)) {
                 FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE);
                 ctx.writeAndFlush(response);
             }
@@ -38,16 +38,16 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<FullHttpRequ
 //            RandomAccessFile file = new RandomAccessFile(HttpRequestHandler.class.getResource("/").getPath() + "/index.html", "r");
             RandomAccessFile file = new RandomAccessFile(
                     Joiner.on(File.separator)
-                            .join(new String[]{System.getProperty("user.dir"),"src","main","resources","index.html"}),
+                            .join(new String[]{System.getProperty("user.dir"), "src", "main", "resources", "index.html"}),
                     "r"
             );
-            HttpResponse response = new DefaultHttpResponse(msg.getProtocolVersion(), HttpResponseStatus.OK);
-            response.headers().set(HttpHeaders.Names.CONTENT_TYPE, "text/html;charset=UTF-8");
+            HttpResponse response = new DefaultHttpResponse(msg.protocolVersion(), HttpResponseStatus.OK);
+            response.headers().set(HttpHeaderNames.CONTENT_TYPE, "text/html;charset=UTF-8");
 
-            boolean isKeepAlive = HttpHeaders.isKeepAlive(msg);
+            boolean isKeepAlive = HttpHeaderUtil.isKeepAlive(msg);
             if (isKeepAlive) {
-                response.headers().set(HttpHeaders.Names.CONTENT_LENGTH, file.length());
-                response.headers().set(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.KEEP_ALIVE);
+                response.headers().set(HttpHeaderNames.CONTENT_LENGTH, String.valueOf(file.length()));
+                response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
             }
 
             ctx.write(response);
@@ -71,5 +71,10 @@ public class HttpRequestHandler extends SimpleChannelInboundHandler<FullHttpRequ
             throws Exception {
         ctx.close();
         cause.printStackTrace(System.err);
+    }
+
+    @Override
+    protected void messageReceived(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
+        this.channelRead0(ctx,msg);
     }
 }

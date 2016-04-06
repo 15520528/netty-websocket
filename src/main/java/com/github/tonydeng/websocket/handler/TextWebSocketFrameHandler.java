@@ -32,7 +32,7 @@ public class TextWebSocketFrameHandler extends SimpleChannelInboundHandler<TextW
 
     }
 
-    @Override
+//    @Override
     protected void channelRead0(ChannelHandlerContext ctx,
                                 TextWebSocketFrame msg) throws Exception {
         group.writeAndFlush(msg.retain());
@@ -42,5 +42,10 @@ public class TextWebSocketFrameHandler extends SimpleChannelInboundHandler<TextW
             throws Exception {
         ctx.close();
         cause.printStackTrace();
+    }
+
+    @Override
+    protected void messageReceived(ChannelHandlerContext ctx, TextWebSocketFrame msg) throws Exception {
+        this.channelRead0(ctx,msg);
     }
 }

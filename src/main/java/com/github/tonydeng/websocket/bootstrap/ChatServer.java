@@ -1,6 +1,6 @@
 package com.github.tonydeng.websocket.bootstrap;
 
-import com.github.tonydeng.websocket.handler.ChatServerInitializer;
+import com.github.tonydeng.websocket.init.ChatServerInitializer;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;

@@ -1,5 +1,7 @@
-package com.github.tonydeng.websocket.handler;
+package com.github.tonydeng.websocket.init;
 
+import com.github.tonydeng.websocket.handler.HttpRequestHandler;
+import com.github.tonydeng.websocket.handler.TextWebSocketFrameHandler;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
