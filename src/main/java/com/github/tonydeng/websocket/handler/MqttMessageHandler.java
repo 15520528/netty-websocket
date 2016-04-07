@@ -14,6 +14,11 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
 
 
     @Override
+    public boolean isSharable() {
+        return true;
+    }
+
+    @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         if (log.isInfoEnabled())
             log.info("mqtt channel active.....");
@@ -26,5 +31,24 @@ public class MqttMessageHandler extends SimpleChannelInboundHandler<MqttMessage>
     protected void messageReceived(ChannelHandlerContext ctx, MqttMessage msg) throws Exception {
         if(log.isInfoEnabled())
             log.info("mqtt channel messageReceived......");
+        switch (msg.fixedHeader().messageType()){
+            case CONNECT:
+                log.info("mqtt CONNECT message:'{}'",msg);
+                break;
+            case SUBSCRIBE:
+                log.info("mqtt CONNECT message:'{}'",msg);
+                break;
+            case PUBLISH:
+                log.info("mqtt PUBLISH message:'{}'",msg);
+                break;
+            case PUBACK:
+                log.info("mqtt PUBACK message:'{}'",msg);
+                break;
+            case PINGREQ:
+                log.info("mqtt PINGREQ message:'{}'",msg);
+                break;
+            default:
+                log.info("mqtt default message:'{}'",msg);
+        }
     }
 }
