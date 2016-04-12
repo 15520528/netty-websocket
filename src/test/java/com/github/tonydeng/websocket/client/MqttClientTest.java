@@ -1,80 +1,81 @@
 package com.github.tonydeng.websocket.client;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoopGroup;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.mqtt.*;
-import io.netty.handler.codec.mqtt.MqttMessage;
-import io.netty.handler.timeout.IdleStateHandler;
+import com.google.common.base.Stopwatch;
 import org.eclipse.paho.client.mqttv3.*;
+import org.eclipse.paho.client.mqttv3.persist.MqttDefaultFilePersistence;
 import org.junit.Test;
+import org.msgpack.MessagePack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by tonydeng on 16/4/6.
  */
-public class MqttClientTest implements MqttCallback{
+public class MqttClientTest {
     private static final Logger log = LoggerFactory.getLogger(MqttClientTest.class);
-    private MqttClient client;
+    private IMqttClient iclient;
+    private MqttClientPersistence dataStore;
+    private String topic = "/painter";
+    private final int qos = 1;
+    private final MessagePack messagePack = new MessagePack();
+
+    private Stopwatch pushStopwatch;
+    private Stopwatch callStopwatch;
+
+
+    //TODO 使用groboutils来进行多线程的并发单元测试
     @Test
-    public void testMqttMessage() throws IOException {
-        String msg = "test";
-        MqttFixedHeader header = new MqttFixedHeader(MqttMessageType.CONNECT, true, MqttQoS.AT_LEAST_ONCE, true, msg.length());
-        MqttMessage mqttMessage = new MqttMessage(header, msg);
-
-
-
-    }
-
-    public void run(){
-        EventLoopGroup group = new NioEventLoopGroup();
-        Bootstrap boot = new Bootstrap()
-                .group(group)
-                .channel(NioSocketChannel.class)
-                .handler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    protected void initChannel(SocketChannel socketChannel) throws Exception {
-                        ChannelPipeline pipeline = socketChannel.pipeline();
-                        pipeline.addLast("idle",new IdleStateHandler(180,200,200));
-                        pipeline.addLast("encode",new MqttEncoder());
-                        pipeline.addLast("decode",new MqttDecoder());
-                    }
-                });
-
-    }
-
-    public void doDemo(String tcpUrl,String clientId,String topicName){
-        try {
-            client = new MqttClient(tcpUrl,clientId);
-            MqttConnectOptions options = new MqttConnectOptions();
-            options.setConnectionTimeout(300);
-            options.setKeepAliveInterval(1000);
-            client.connect(options);
-            client.setCallback(this);
-            client.subscribe(topicName);
-        } catch (MqttException e) {
-            e.printStackTrace();
+    public void testMqttMessage() throws IOException, MqttException {
+        connect("tcp://localhost:9999");
+        for (int i = 0; i < 100; i++) {
+            pushStopwatch = Stopwatch.createStarted();
+            MqttMessage mqttMessage = new MqttMessage(messagePack.write("test mqtt"));
+            mqttMessage.setQos(qos);
+            iclient.publish(topic, mqttMessage);
+            pushStopwatch.stop();
+            log.info("push time {}ms", pushStopwatch.elapsed(TimeUnit.MILLISECONDS));
         }
     }
 
-    public void connectionLost(Throwable cause){
-        cause.printStackTrace();
+    private void connect(String url) throws MqttException {
+        String tmpDir = System.getProperty("java.io.tmpdir");
+        dataStore = new MqttDefaultFilePersistence(tmpDir + File.separator + "publisher");
+        iclient = new MqttClient(url, System.currentTimeMillis() + "", dataStore);
+        iclient.setCallback(new TestCallback());
+        iclient.connect();
+        iclient.subscribe("/painter", qos);
+
     }
 
-    public void messageArrived(String topic, org.eclipse.paho.client.mqttv3.MqttMessage mqttMessage){
-        log.info("[GOT PUBLISH MESSAGE]:{}",mqttMessage);
-    }
+    class TestCallback implements MqttCallback {
 
-    @Override
-    public void deliveryComplete(IMqttDeliveryToken iMqttDeliveryToken) {
+        private boolean m_connectionLost = false;
 
+        @Override
+        public void connectionLost(Throwable cause) {
+            m_connectionLost = true;
+            log.info("connectionLost......");
+        }
+
+        @Override
+        public void messageArrived(String s, org.eclipse.paho.client.mqttv3.MqttMessage message) throws Exception {
+            callStopwatch = Stopwatch.createStarted();
+
+            String msg = messagePack.read(message.getPayload(), String.class);
+            callStopwatch.stop();
+            log.info("message:'{}' len={}, cost: {}ms", msg, msg.length(), callStopwatch.elapsed(TimeUnit.MILLISECONDS));
+        }
+
+        @Override
+        public void deliveryComplete(IMqttDeliveryToken token) {
+            log.info("deliveryComplete......  token:'{}'", token);
+        }
     }
 
 }
+
+

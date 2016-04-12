@@ -1,6 +1,8 @@
 package com.github.tonydeng.websocket.bootstrap;
 
 import com.github.tonydeng.websocket.init.MqttServerInitalizer;
+import io.moquette.BrokerConstants;
+import io.moquette.server.Server;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -11,67 +13,30 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Properties;
 
 /**
  * Created by tonydeng on 16/4/5.
  */
-public class MqttServer {
+public class MqttServer extends Server {
     private static final Logger log = LoggerFactory.getLogger(MqttServer.class);
 
-    private final EventLoopGroup boss = new NioEventLoopGroup();
-
-    private final EventLoopGroup worker = new NioEventLoopGroup();
-
-    private Channel channel;
-
-    private static final int port = 2015;
-
-    public ChannelFuture start(InetSocketAddress address) {
-
-        ServerBootstrap boot = new ServerBootstrap();
-
-        boot.group(boss, worker)
-                .channel(NioServerSocketChannel.class)
-                .option(ChannelOption.SO_BACKLOG, 1024)
-                .childHandler(new MqttServerInitalizer());
-
-        try {
-            ChannelFuture f = boot.bind(address).sync();
-            if (log.isInfoEnabled())
-                log.info("server start port:'{}'", port);
-            f.channel().closeFuture().sync();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-            boss.shutdownGracefully();
-            worker.shutdownGracefully();
-        }
-        return null;
-    }
-    public void destroy() {
-        if (log.isInfoEnabled())
-            log.info("chat server destroy......");
-        if (channel != null)
-            channel.close();
-        boss.shutdownGracefully();
-        worker.shutdownGracefully();
-    }
-
-
-
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+        Properties cfg = new Properties();
+        cfg.put(BrokerConstants.HOST_PROPERTY_NAME, "localhost");
+        cfg.put(BrokerConstants.PORT_PROPERTY_NAME, "9999");
         final MqttServer server = new MqttServer();
-        ChannelFuture f = server.start(new InetSocketAddress(port));
-        if (log.isInfoEnabled())
-            log.info("chat server start................");
-        Runtime.getRuntime().addShutdownHook(new Thread() {
+        server.startServer(cfg);
+        if(log.isInfoEnabled())
+            log.info("mqtt server start......");
+
+        Runtime.getRuntime().addShutdownHook(new Thread(){
             @Override
             public void run() {
-                if(log.isInfoEnabled())
-                    log.info("chat server shutdown.......");
-                server.destroy();
+                server.stopServer();
             }
         });
-        f.channel().closeFuture().syncUninterruptibly();
     }
 }
